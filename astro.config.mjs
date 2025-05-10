@@ -1,3 +1,4 @@
+// astro.config.mjs
 import process from 'node:process'
 import { defineConfig } from 'astro/config'
 import vercel from '@astrojs/vercel/serverless'
@@ -7,10 +8,12 @@ import node from '@astrojs/node'
 import { provider } from 'std-env'
 import sentry from '@sentry/astro'
 
+// 多平台适配器配置
 const providers = {
   vercel: vercel({
     isr: false,
     edgeMiddleware: false,
+    runtime: 'nodejs18.x', // ✅ 显式指定支持的 runtime
   }),
   cloudflare_pages: cloudflare(),
   netlify: netlify({
@@ -24,21 +27,21 @@ const providers = {
 
 const adapterProvider = process.env.SERVER_ADAPTER || provider
 
-// https://astro.build/config
 export default defineConfig({
   output: 'server',
   adapter: providers[adapterProvider] || providers.node,
+
   integrations: [
     ...(process.env.SENTRY_DSN
       ? [
           sentry({
             enabled: {
               client: false,
-              server: process.env.SENTRY_DSN,
+              server: !!process.env.SENTRY_DSN,
             },
             dsn: process.env.SENTRY_DSN,
             sourceMapsUploadOptions: {
-              enabled: process.env.SENTRY_PROJECT && process.env.SENTRY_AUTH_TOKEN,
+              enabled: !!(process.env.SENTRY_PROJECT && process.env.SENTRY_AUTH_TOKEN),
               project: process.env.SENTRY_PROJECT,
               authToken: process.env.SENTRY_AUTH_TOKEN,
             },
@@ -46,6 +49,7 @@ export default defineConfig({
         ]
       : []),
   ],
+
   vite: {
     ssr: {
       noExternal: process.env.DOCKER ? !!process.env.DOCKER : undefined,
